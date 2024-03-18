@@ -1,5 +1,5 @@
 "use client"
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import {
     Button,
     Dropdown,
@@ -23,7 +23,7 @@ import {
 } from "@nextui-org/react";
 import {EditIcon} from "./EditIcon";
 import {DeleteIcon} from "./DeleteIcon";
-import {columns} from "./data";
+// import {columns} from "./data";
 import {addTodo, deleteTodo, editTodo} from "../services/api";
 import {ChevronDownIcon} from "./ChevronDownIcon";
 import {PlusIcon} from "./PlusIcon";
@@ -31,10 +31,34 @@ import {capitalize} from "./utils";
 import {uuid} from "uuidv4";
 
 const colors = ["default", "primary", "secondary", "success", "warning", "danger"];
+const columns = [
+    {name: "", uid: "text"},
+    {name: "ACTIONS", uid: "actions"},
+];
 
-const TodoTable = ({tasks}) => {
+const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
     const [taskList, setTaskList] = useState(tasks);
-    const [selectedColor, setSelectedColor] = useState("primary");
+    useEffect(() => {
+        const storedTasks = JSON.parse(localStorage.getItem("tasks"));
+        if (storedTasks) {
+            setTaskList(storedTasks);
+        }
+        const handleStorageChange = (event) => {
+            if (event.key === "tasks") {
+                setTaskList(JSON.parse(event.newValue));
+            }
+        };
+
+        window.addEventListener("storage", handleStorageChange);
+
+        return () => {
+            window.removeEventListener("storage", handleStorageChange);
+        };
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem("tasks", JSON.stringify(taskList));
+    }, [taskList]);
 
     const {isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose} = useDisclosure();
     const [editTask, setEditTask] = React.useState();
@@ -207,12 +231,13 @@ const TodoTable = ({tasks}) => {
             </div>
             <Table color={selectedColor}
                    selectionMode="multiple"
-                   isStriped aria-label="Example table with custom cells">
+                   isStriped aria-label="Todos">
                 <TableHeader columns={columns}>
                     {(column) => (
                         <TableColumn key={column.uid} align="end">
                             {column.name}
                         </TableColumn>
+
                     )}
                 </TableHeader>
                 <TableBody items={taskList}>

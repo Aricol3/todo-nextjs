@@ -1,12 +1,13 @@
 import {getAllTodos} from "../services/api";
-import TodoTable from "../components/TodoTable";
+import App from "./App";
 
 export default async function Home() {
     const todosList = await getAllTodos();
 
     return (
-        <>
-            <TodoTable tasks={todosList}/>
-        </>
+        <App taskList={todosList}/>
     );
 }
+
+
+
