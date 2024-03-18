@@ -3,7 +3,6 @@ import TodoTable from "../components/TodoTable";
 
 export default async function Home() {
     const todosList = await getAllTodos();
-    console.log(todosList)
 
     return (
         <>

@@ -2,18 +2,17 @@ const baseUrl = "http://localhost:3001"
 
 export const getAllTodos = async () => {
     const res = await fetch(`${baseUrl}/tasks`, {cache: "no-store"});
-    const todo = res.json();
-    return todo;
+    return res.json();
 };
 
-export const addTodo = async () => {
+export const addTodo = async (newTodo) => {
+    console.log(newTodo)
     const res = await fetch(`${baseUrl}/tasks/`, {
-        method: "PUT",
+        method: "POST",
         headers: {"Content-Type": "application/json",},
-        body: JSON.stringify(todo),
+        body: JSON.stringify(newTodo),
     });
-    const updatedTodo = await res.json();
-    return updatedTodo;
+    return await res.json();
 };
 
 export const editTodo = async (todo) => {
@@ -22,8 +21,7 @@ export const editTodo = async (todo) => {
         headers: {"Content-Type": "application/json",},
         body: JSON.stringify(todo),
     });
-    const updatedTodo = await res.json();
-    return updatedTodo;
+    return await res.json();
 };
 
 export const deleteTodo = async (taskId) => {

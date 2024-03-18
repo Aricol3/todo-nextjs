@@ -2,13 +2,15 @@
 import React, {useState} from "react";
 import {
     Button,
+    Dropdown,
+    DropdownItem,
+    DropdownMenu,
+    DropdownTrigger,
     Modal,
     ModalBody,
     ModalContent,
     ModalFooter,
     ModalHeader,
-    Radio,
-    RadioGroup,
     Table,
     TableBody,
     TableCell,
@@ -22,22 +24,17 @@ import {
 import {EditIcon} from "./EditIcon";
 import {DeleteIcon} from "./DeleteIcon";
 import {columns} from "./data";
-import {deleteTodo, editTodo} from "../services/api";
-
-const statusColorMap = {
-    active: "success",
-    paused: "danger",
-    vacation: "warning",
-};
+import {addTodo, deleteTodo, editTodo} from "../services/api";
+import {ChevronDownIcon} from "./ChevronDownIcon";
+import {PlusIcon} from "./PlusIcon";
+import {capitalize} from "./utils";
+import {uuid} from "uuidv4";
 
 const colors = ["default", "primary", "secondary", "success", "warning", "danger"];
 
-
 const TodoTable = ({tasks}) => {
     const [taskList, setTaskList] = useState(tasks);
-    const [selectedColor, setSelectedColor] = useState("default");
-    const [selectedKeys, setSelectedKeys] = useState(new Set(["2"]));
-
+    const [selectedColor, setSelectedColor] = useState("primary");
 
     const {isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose} = useDisclosure();
     const [editTask, setEditTask] = React.useState();
@@ -51,6 +48,7 @@ const TodoTable = ({tasks}) => {
                             <ModalBody>
                                 <Textarea
                                     fullWidth={true}
+                                    isRequired={true}
                                     value={editTask.text}
                                     onChange={(e) => setEditTask({...editTask, text: e.target.value})}
                                 />
@@ -86,8 +84,56 @@ const TodoTable = ({tasks}) => {
         onEditOpen();
     }
 
+    const {isOpen: isAddOpen, onOpen: onAddOpen, onClose: onAddClose} = useDisclosure();
+    const [newTask, setNewTask] = React.useState("");
+    const renderAddModal = () => {
+        return (
+            <Modal backdrop="blur" isOpen={isAddOpen} onClose={onAddClose}>
+                <ModalContent>
+                    {(onAddClose) => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1">Add New Task</ModalHeader>
+                            <ModalBody>
+                                <Textarea
+                                    fullWidth={true}
+                                    isRequired={true}
+                                    value={newTask}
+                                    onChange={(e) => setNewTask(e.target.value)}
+                                />
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button color="danger" variant="light" onPress={onAddClose}>
+                                    Cancel
+                                </Button>
+                                <Button color="primary" onPress={async () => {
+                                    onAddClose();
+                                    await addTodo({
+                                        id: uuid(),
+                                        text: newTask
+                                    });
+                                    setTaskList(prevTaskList => {
+                                        return [...prevTaskList, {
+                                            id: uuid(),
+                                            text: newTask
+                                        }];
+                                    });
+                                }}
+                                >
+                                    Submit
+                                </Button>
+                            </ModalFooter>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
+        )
+    }
+    const handleAdd = () => {
+        setNewTask("");
+        onAddOpen();
+    }
+
     const handleDelete = async (taskId) => {
-        console.log("AA", taskId);
         await deleteTodo(taskId);
         setTaskList(prevTaskList => prevTaskList.filter(task => task.id !== taskId));
     }
@@ -128,6 +174,37 @@ const TodoTable = ({tasks}) => {
 
     return (
         <>
+            <div className="flex justify-between gap-3 m-3">
+                <Button variant="ghost" color={selectedColor}>
+                    Done
+                </Button>
+                <div className="flex gap-3">
+                    <Dropdown>
+                        <DropdownTrigger className="hidden sm:flex">
+                            <Button color={selectedColor} endContent={<ChevronDownIcon className="text-small"/>}
+                                    variant="flat">
+                                Color
+                            </Button>
+                        </DropdownTrigger>
+                        <DropdownMenu
+                            aria-label="Table Columns"
+                            closeOnSelect={false}
+                            disallowEmptySelection
+                            selectionMode="single"
+                        >
+                            {colors.map((color) => (
+                                <DropdownItem key={color} color={color} onPress={() => setSelectedColor(color)}
+                                              className="capitalize">
+                                    {capitalize(color)}
+                                </DropdownItem>
+                            ))}
+                        </DropdownMenu>
+                    </Dropdown>
+                    <Button onClick={handleAdd} color={selectedColor} endContent={<PlusIcon/>}>
+                        Add New
+                    </Button>
+                </div>
+            </div>
             <Table color={selectedColor}
                    selectionMode="multiple"
                    isStriped aria-label="Example table with custom cells">
@@ -146,23 +223,7 @@ const TodoTable = ({tasks}) => {
                     )}
                 </TableBody>
             </Table>
-            <RadioGroup
-                label="Selection color"
-                orientation="horizontal"
-                value={selectedColor}
-                onValueChange={setSelectedColor}
-            >
-                {colors.map((color) => (
-                    <Radio
-                        key={color}
-                        color={color}
-                        value={color}
-                        className="capitalize"
-                    >
-                        {color}
-                    </Radio>
-                ))}
-            </RadioGroup>
+            {renderAddModal()}
             {renderEditModal()}
         </>
     );
