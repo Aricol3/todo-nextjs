@@ -29,6 +29,8 @@ import {ChevronDownIcon} from "./ChevronDownIcon";
 import {PlusIcon} from "./PlusIcon";
 import {capitalize} from "./utils";
 import {uuid} from "uuidv4";
+import {useDispatch} from "react-redux";
+import {setTodos} from "../redux-toolkit/slices/todoSlice";
 
 const colors = ["default", "primary", "secondary", "success", "warning", "danger"];
 const columns = [
@@ -38,7 +40,11 @@ const columns = [
 
 const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
     const [taskList, setTaskList] = useState(tasks);
+    const [selectedKeys, setSelectedKeys] = React.useState(new Set());
+    const dispatch = useDispatch();
     useEffect(() => {
+        dispatch(setTodos("asdasdas"))
+        console.log("da")
         const storedTasks = JSON.parse(localStorage.getItem("tasks"));
         if (storedTasks) {
             setTaskList(storedTasks);
@@ -63,6 +69,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
     const {isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose} = useDisclosure();
     const [editTask, setEditTask] = React.useState();
     const renderEditModal = () => {
+        dispatch(setTodos(taskList))
         return (
             <Modal backdrop="blur" isOpen={isEditOpen} onClose={onEditClose}>
                 <ModalContent>
@@ -81,7 +88,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                                 <Button color="danger" variant="light" onPress={onEditClose}>
                                     Cancel
                                 </Button>
-                                <Button color="primary" onPress={async () => {
+                                <Button color={selectedColor} onPress={async () => {
                                     onEditClose();
                                     await editTodo(editTask);
                                     setTaskList(prevTaskList => prevTaskList.map(task => {
@@ -129,7 +136,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                                 <Button color="danger" variant="light" onPress={onAddClose}>
                                     Cancel
                                 </Button>
-                                <Button color="primary" onPress={async () => {
+                                <Button color={selectedColor} onPress={async () => {
                                     onAddClose();
                                     await addTodo({
                                         id: uuid(),
@@ -155,6 +162,29 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
     const handleAdd = () => {
         setNewTask("");
         onAddOpen();
+    }
+
+    const handleBulkDelete = () => {
+        if (selectedKeys === "all") {
+            taskList.forEach(async (task) => {
+                await handleDelete(task.id);
+            })
+        } else {
+            selectedKeys.forEach(async (taskID) => {
+                await handleDelete(taskID);
+            })
+        }
+    }
+
+    const handleDownload = () => {
+        const blob = new Blob([JSON.stringify(taskList)], {type: 'application/json'});
+
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'todos.json';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 
     const handleDelete = async (taskId) => {
@@ -224,6 +254,9 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                             ))}
                         </DropdownMenu>
                     </Dropdown>
+                    <Button onClick={handleBulkDelete} color="danger">
+                        Delete Selected
+                    </Button>
                     <Button onClick={handleAdd} color={selectedColor} endContent={<PlusIcon/>}>
                         Add New
                     </Button>
@@ -231,6 +264,9 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
             </div>
             <Table color={selectedColor}
                    selectionMode="multiple"
+                   onSelectionChange={setSelectedKeys}
+                   onRowAction={() => {
+                   }}
                    isStriped aria-label="Todos">
                 <TableHeader columns={columns}>
                     {(column) => (
@@ -248,6 +284,9 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                     )}
                 </TableBody>
             </Table>
+            <Button className="m-3" onClick={handleDownload} color={selectedColor}>
+                Download list
+            </Button>
             {renderAddModal()}
             {renderEditModal()}
         </>
