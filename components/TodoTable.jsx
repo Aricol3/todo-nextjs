@@ -31,6 +31,8 @@ import {capitalize} from "./utils";
 import {uuid} from "uuidv4";
 import {useDispatch} from "react-redux";
 import {setTodos} from "../redux-toolkit/slices/todoSlice";
+import {toast, ToastContainer} from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const colors = ["default", "primary", "secondary", "success", "warning", "danger"];
 const columns = [
@@ -89,15 +91,20 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                                     Cancel
                                 </Button>
                                 <Button color={selectedColor} onPress={async () => {
-                                    onEditClose();
-                                    await editTodo(editTask);
-                                    setTaskList(prevTaskList => prevTaskList.map(task => {
-                                        if (task.id === editTask.id) {
-                                            return editTask;
-                                        } else {
-                                            return task;
-                                        }
-                                    }));
+                                    try {
+                                        onEditClose();
+                                        await editTodo(editTask);
+                                        setTaskList(prevTaskList => prevTaskList.map(task => {
+                                            if (task.id === editTask.id) {
+                                                return editTask;
+                                            } else {
+                                                return task;
+                                            }
+                                        }));
+                                    } catch (error) {
+                                        toast.error("Failed to edit task. Please try again later.");
+                                        console.error("Edit task error:", error);
+                                    }
                                 }}
                                 >
                                     Submit
@@ -137,17 +144,22 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                                     Cancel
                                 </Button>
                                 <Button color={selectedColor} onPress={async () => {
-                                    onAddClose();
-                                    await addTodo({
-                                        id: uuid(),
-                                        text: newTask
-                                    });
-                                    setTaskList(prevTaskList => {
-                                        return [...prevTaskList, {
+                                    try {
+                                        onAddClose();
+                                        await addTodo({
                                             id: uuid(),
                                             text: newTask
-                                        }];
-                                    });
+                                        });
+                                        setTaskList(prevTaskList => {
+                                            return [...prevTaskList, {
+                                                id: uuid(),
+                                                text: newTask
+                                            }];
+                                        });
+                                    } catch (error) {
+                                        toast.error("Failed to add task. Please try again later.");
+                                        console.error("Add task error:", error);
+                                    }
                                 }}
                                 >
                                     Submit
@@ -188,8 +200,13 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
     }
 
     const handleDelete = async (taskId) => {
-        await deleteTodo(taskId);
-        setTaskList(prevTaskList => prevTaskList.filter(task => task.id !== taskId));
+        try {
+            await deleteTodo(taskId);
+            setTaskList(prevTaskList => prevTaskList.filter(task => task.id !== taskId));
+        } catch (error) {
+            toast.error("Failed to delete task. Please try again later.");
+            console.error("Delete task error:", error);
+        }
     }
 
 
@@ -289,6 +306,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
             </Button>
             {renderAddModal()}
             {renderEditModal()}
+            <ToastContainer/>
         </>
     );
 }
