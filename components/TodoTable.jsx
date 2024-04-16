@@ -42,11 +42,13 @@ const columns = [
 
 const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
     const [taskList, setTaskList] = useState(tasks);
+    useEffect(() => {
+        setTaskList(tasks);
+    }, [tasks]);
+
     const [selectedKeys, setSelectedKeys] = React.useState(new Set());
     const dispatch = useDispatch();
     useEffect(() => {
-        dispatch(setTodos("asdasdas"))
-        console.log("da")
         const storedTasks = JSON.parse(localStorage.getItem("tasks"));
         if (storedTasks) {
             setTaskList(storedTasks);
