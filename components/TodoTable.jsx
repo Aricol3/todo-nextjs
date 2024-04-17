@@ -19,12 +19,11 @@ import {
     TableRow,
     Textarea,
     Tooltip,
-    useDisclosure
+    useDisclosure,
 } from "@nextui-org/react";
 import {EditIcon} from "./EditIcon";
 import {DeleteIcon} from "./DeleteIcon";
-// import {columns} from "./data";
-import {addTodo, deleteTodo, editTodo} from "../services/api";
+import {addTodo, deleteTodo, editTodo, getAllTodos} from "../services/api";
 import {ChevronDownIcon} from "./ChevronDownIcon";
 import {PlusIcon} from "./PlusIcon";
 import {capitalize} from "./utils";
@@ -34,6 +33,8 @@ import {toast, ToastContainer} from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./TodoTable.css";
 import {AddIcon} from "./AddIcon";
+import {useAsyncList} from 'react-stately'
+
 
 const colors = ["default", "primary", "secondary", "success", "warning", "danger"];
 const columns = [
@@ -265,6 +266,20 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
         return acc;
     }, []);
 
+    async function load({signal, cursor}) {
+        const res = await fetch(
+            cursor || "https://localhost:3001/tasks/?page=",
+            {signal}
+        );
+        const json = await res.json();
+        return {
+            items: json.results,
+            cursor: json.next,
+        };
+    }
+
+    const list = useAsyncList({load});
+
     return (
         <>
             <div className="flex justify-between gap-3 m-3">
@@ -306,7 +321,8 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                    onSelectionChange={setSelectedKeys}
                    onRowAction={() => {
                    }}
-                   isStriped aria-label="Todos">
+                   isStriped aria-label="Todos"
+                   className="todoTable">
                 <TableHeader columns={columns}>
                     {(column) => (
                         <TableColumn key={column.uid} align="end">
@@ -315,7 +331,8 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
 
                     )}
                 </TableHeader>
-                <TableBody items={mergedTaskList}>
+                <TableBody items={mergedTaskList} loadingState={list.loadingState} onLoadMore={list.loadMore}
+                >
                     {(task) => (
                         <TableRow key={task._id} className={`${task.parentId ? "subTask" : ""}`}>
                             {(columnKey) => <TableCell>{renderCell(task, columnKey)}</TableCell>}

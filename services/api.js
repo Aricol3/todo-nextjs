@@ -1,16 +1,29 @@
 const baseUrl = "http://localhost:3001";
 
-export const getAllTodos = async () => {
+export const getAllTodos = async (queryParams) => {
     try {
-        const res = await fetch(`${baseUrl}/tasks`, {cache: "no-store"});
+        // Construct the query string from the provided queryParams object
+        const queryString = new URLSearchParams(queryParams).toString();
+
+        // Append the query string to the base URL
+        const url = `${baseUrl}/tasks${queryString ? '?' + queryString : ''}`;
+
+        // Make an HTTP GET request to the constructed URL
+        const res = await fetch(url, { cache: "no-store" });
+
+        // Check if the response is not successful
         if (!res.ok) {
             throw new Error('Failed to fetch todos');
         }
+
+        // Parse the JSON response body and return it
         return res.json();
     } catch (error) {
+        // If any errors occur during the process, throw them
         throw error;
     }
 };
+
 
 export const addTodo = async (newTodo) => {
     try {

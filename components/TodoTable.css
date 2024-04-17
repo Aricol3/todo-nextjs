@@ -1,3 +1,7 @@
-.subTask>td{
+.subTask > td {
     padding-left: 35px;
+}
+
+.todoTable {
+    height: 500px;
 }
