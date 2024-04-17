@@ -28,6 +28,13 @@ const Todo = mongoose.model('todo', todoSchema);
 app.use(bodyParser.json());
 app.use(cors());
 
+const rateLimit = require('express-rate-limit');
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes max: 100, // Limit each IP to 100 requests
+})
+app.use('/api/', apiLimiter);
+
+
 // Get all todos
 app.get('/tasks', async (req, res) => {
     try {
