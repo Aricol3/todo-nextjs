@@ -7,7 +7,7 @@ const PORT = 3002;
 const server = http.createServer();
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:3000", // Assuming your Next.js app runs on 3000
+        origin: "http://localhost:3000",
     },
 });
 
@@ -21,8 +21,8 @@ io.on('connection', (socket) => {
 
 const createTodo = async () => {
     const newTodo = {
-        id: uuid(),
-        text: uuid()
+        text: uuid(),
+        parentId:""
     };
     try {
         const res = await fetch(`${baseUrl}/tasks/`, {

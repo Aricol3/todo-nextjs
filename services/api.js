@@ -30,7 +30,7 @@ export const addTodo = async (newTodo) => {
 
 export const editTodo = async (todo) => {
     try {
-        const res = await fetch(`${baseUrl}/tasks/${todo.id}`, {
+        const res = await fetch(`${baseUrl}/tasks/edit`, {
             method: "PUT",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify(todo),

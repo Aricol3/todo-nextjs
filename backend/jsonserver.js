@@ -1,86 +1,102 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors'); // Import cors middleware
-const fs = require('fs').promises;
+const cors = require('cors');
+const mongoose = require('mongoose');
 
 const app = express();
 const PORT = 3001;
-const todosFilePath = 'data/todos.json';
 
-// Middleware to parse JSON bodies
+mongoose.connect('mongodb://localhost/todo-db')
+    .then(() => {
+        console.log('Connected to MongoDB');
+    })
+    .catch((error) => {
+        console.error('Error connecting to MongoDB:', error);
+    });
+
+// Define Todo schema
+const todoSchema = new mongoose.Schema({
+    id: String,
+    text: String,
+    parentId: String
+}, {collection:"todo"});
+
+// Create Todo model
+const Todo = mongoose.model('todo', todoSchema);
+
 app.use(bodyParser.json());
-
-// Enable CORS for all routes
 app.use(cors());
 
-// Middleware to load todos from file
-app.use(async (req, res, next) => {
-    try {
-        const todosData = await fs.readFile(todosFilePath, 'utf8');
-        req.todos = JSON.parse(todosData).tasks; // Assuming tasks is the array of todos
-        next();
-    } catch (err) {
-        console.error('Error reading todos file:', err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Middleware to save todos to file
-app.use(async (req, res, next) => {
-    try {
-        await fs.writeFile(todosFilePath, JSON.stringify({ tasks: req.todos }, null, 2)); // Assuming tasks is the array of todos
-        next();
-    } catch (err) {
-        console.error('Error writing todos file:', err);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
 // Get all todos
-app.get('/tasks', (req, res) => {
-    res.json(req.todos);
+app.get('/tasks', async (req, res) => {
+    try {
+        const todos = await Todo.find();
+        res.json(todos);
+    } catch (err) {
+        console.error('Error fetching todos:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 // Get a single todo by ID
-app.get('/tasks/:id', (req, res) => {
-    const todoId = req.params.id;
-    const todo = req.todos.find(todo => todo.id === todoId);
-    if (!todo) {
-        return res.status(404).json({ error: 'Todo not found' });
+app.get('/tasks/:id', async (req, res) => {
+    try {
+        const todo = await Todo.findById(req.params.id);
+        if (!todo) {
+            return res.status(404).json({ error: 'Todo not found' });
+        }
+        res.json(todo);
+    } catch (err) {
+        console.error('Error fetching todo:', err);
+        res.status(500).json({ error: 'Internal server error' });
     }
-    res.json(todo);
 });
 
 // Add a new todo
-app.post('/tasks', (req, res) => {
-    const newTodo = req.body;
-    req.todos.push(newTodo);
-    res.status(201).json(newTodo);
+app.post('/tasks', async (req, res) => {
+    try {
+        const newTodo = await Todo.create(req.body);
+        res.status(201).json(newTodo);
+    } catch (err) {
+        console.error('Error creating todo:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 // Update a todo
-app.put('/tasks/:id', (req, res) => {
-    const todoId = req.params.id;
-    const updatedTodo = req.body;
-    let index = req.todos.findIndex(todo => todo.id === todoId);
-    if (index === -1) {
-        return res.status(404).json({ error: 'Todo not found' });
+app.put('/tasks/edit', async (req, res) => {
+    try {
+        console.log("req.body",req.body)
+        const updatedTodo = await Todo.findByIdAndUpdate(req.body._id, req.body,{new:true});
+        if (!updatedTodo) {
+            return res.status(404).json({ error: 'Todo not found' });
+        }
+        console.log("UPPPPP", updatedTodo)
+        res.json(updatedTodo);
+    } catch (err) {
+        console.error('Error updating todo:', err);
+        res.status(500).json({ error: 'Internal server error' });
     }
-    req.todos[index] = updatedTodo;
-    res.json(updatedTodo);
 });
 
 // Delete a todo
-app.delete('/tasks/:id', (req, res) => {
-    const todoId = req.params.id;
-    let index = req.todos.findIndex(todo => todo.id === todoId);
-    if (index === -1) {
-        return res.status(404).json({ error: 'Todo not found' });
+app.delete('/tasks/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+
+        await Todo.deleteMany({ parentId: id });
+        await Todo.findByIdAndDelete(id);
+
+        res.sendStatus(204);
+    } catch (err) {
+        console.error('Error deleting todo:', err);
+        res.status(500).json({ error: 'Internal server error' });
     }
-    req.todos.splice(index, 1);
-    res.sendStatus(204);
 });
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
+module.exports = app;
+

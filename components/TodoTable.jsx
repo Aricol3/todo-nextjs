@@ -28,11 +28,12 @@ import {addTodo, deleteTodo, editTodo} from "../services/api";
 import {ChevronDownIcon} from "./ChevronDownIcon";
 import {PlusIcon} from "./PlusIcon";
 import {capitalize} from "./utils";
-import {uuid} from "uuidv4";
 import {useDispatch} from "react-redux";
 import {setTodos} from "../redux-toolkit/slices/todoSlice";
 import {toast, ToastContainer} from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import "./TodoTable.css";
+import {AddIcon} from "./AddIcon";
 
 const colors = ["default", "primary", "secondary", "success", "warning", "danger"];
 const columns = [
@@ -97,7 +98,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                                         onEditClose();
                                         await editTodo(editTask);
                                         setTaskList(prevTaskList => prevTaskList.map(task => {
-                                            if (task.id === editTask.id) {
+                                            if (task._id === editTask._id) {
                                                 return editTask;
                                             } else {
                                                 return task;
@@ -126,13 +127,15 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
 
     const {isOpen: isAddOpen, onOpen: onAddOpen, onClose: onAddClose} = useDisclosure();
     const [newTask, setNewTask] = React.useState("");
+    const [parentTaskId, setParentTaskId] = React.useState("");
     const renderAddModal = () => {
         return (
             <Modal backdrop="blur" isOpen={isAddOpen} onClose={onAddClose}>
                 <ModalContent>
                     {(onAddClose) => (
                         <>
-                            <ModalHeader className="flex flex-col gap-1">Add New Task</ModalHeader>
+                            <ModalHeader
+                                className="flex flex-col gap-1">{parentTaskId ? "Add New Subtask" : "Add New task"}</ModalHeader>
                             <ModalBody>
                                 <Textarea
                                     fullWidth={true}
@@ -148,15 +151,12 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                                 <Button color={selectedColor} onPress={async () => {
                                     try {
                                         onAddClose();
-                                        await addTodo({
-                                            id: uuid(),
-                                            text: newTask
+                                        const createdTask = await addTodo({
+                                            text: newTask,
+                                            parentId: parentTaskId
                                         });
                                         setTaskList(prevTaskList => {
-                                            return [...prevTaskList, {
-                                                id: uuid(),
-                                                text: newTask
-                                            }];
+                                            return [...prevTaskList, createdTask];
                                         });
                                     } catch (error) {
                                         toast.error("Failed to add task. Please try again later.");
@@ -173,7 +173,10 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
             </Modal>
         )
     }
-    const handleAdd = () => {
+    const handleAdd = (parent = "") => {
+        setParentTaskId(parent)
+        console.log("parent", parent)
+        console.log("parent", parentTaskId)
         setNewTask("");
         onAddOpen();
     }
@@ -181,7 +184,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
     const handleBulkDelete = () => {
         if (selectedKeys === "all") {
             taskList.forEach(async (task) => {
-                await handleDelete(task.id);
+                await handleDelete(task._id);
             })
         } else {
             selectedKeys.forEach(async (taskID) => {
@@ -204,7 +207,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
     const handleDelete = async (taskId) => {
         try {
             await deleteTodo(taskId);
-            setTaskList(prevTaskList => prevTaskList.filter(task => task.id !== taskId));
+            setTaskList(prevTaskList => prevTaskList.filter(task => task._id !== taskId));
         } catch (error) {
             toast.error("Failed to delete task. Please try again later.");
             console.error("Delete task error:", error);
@@ -226,6 +229,13 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
             case "actions":
                 return (
                     <div className="relative flex items-center gap-2">
+                        {!task.parentId ?
+                            <Tooltip content="Add subtask" closeDelay={50} style={{pointerEvents: "none"}}>
+              <span className="text-lg text-default-400 cursor-pointer active:opacity-50"
+                    onClick={() => handleAdd(task._id)}>
+                <AddIcon/>
+              </span>
+                            </Tooltip> : ""}
                         <Tooltip content="Edit task" closeDelay={50} style={{pointerEvents: "none"}}>
               <span className="text-lg text-default-400 cursor-pointer active:opacity-50"
                     onClick={() => handleEdit(task)}>
@@ -234,7 +244,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                         </Tooltip>
                         <Tooltip color="danger" content="Delete task" closeDelay={50} style={{pointerEvents: "none"}}>
               <span className="text-lg text-danger cursor-pointer active:opacity-50"
-                    onClick={() => handleDelete(task.id)}>
+                    onClick={() => handleDelete(task._id)}>
                 <DeleteIcon/>
               </span>
                         </Tooltip>
@@ -243,6 +253,16 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
             default:
                 return cellValue;
         }
+    }, []);
+
+    const mergedTaskList = taskList.reduce((acc, task) => {
+        if (task.parentId === "") {
+            acc.push(task);
+            const subTasks = taskList.filter(subTask => subTask.parentId === task._id);
+            acc.push(...subTasks);
+        }
+
+        return acc;
     }, []);
 
     return (
@@ -276,7 +296,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                     <Button onClick={handleBulkDelete} color="danger">
                         Delete Selected
                     </Button>
-                    <Button onClick={handleAdd} color={selectedColor} endContent={<PlusIcon/>}>
+                    <Button onClick={() => handleAdd()} color={selectedColor} endContent={<PlusIcon/>}>
                         Add New
                     </Button>
                 </div>
@@ -295,9 +315,9 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
 
                     )}
                 </TableHeader>
-                <TableBody items={taskList}>
+                <TableBody items={mergedTaskList}>
                     {(task) => (
-                        <TableRow key={task.id}>
+                        <TableRow key={task._id} className={`${task.parentId ? "subTask" : ""}`}>
                             {(columnKey) => <TableCell>{renderCell(task, columnKey)}</TableCell>}
                         </TableRow>
                     )}
