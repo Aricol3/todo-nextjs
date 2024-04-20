@@ -1,5 +1,5 @@
 "use client"
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {
     Button,
     Dropdown,
@@ -33,7 +33,6 @@ import {toast, ToastContainer} from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./TodoTable.css";
 import {AddIcon} from "./AddIcon";
-import {useAsyncList} from 'react-stately'
 
 
 const colors = ["default", "primary", "secondary", "success", "warning", "danger"];
@@ -157,7 +156,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                                             parentId: parentTaskId
                                         });
                                         setTaskList(prevTaskList => {
-                                            return [...prevTaskList, createdTask];
+                                            return [createdTask,...prevTaskList];
                                         });
                                     } catch (error) {
                                         toast.error("Failed to add task. Please try again later.");
@@ -176,8 +175,6 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
     }
     const handleAdd = (parent = "") => {
         setParentTaskId(parent)
-        console.log("parent", parent)
-        console.log("parent", parentTaskId)
         setNewTask("");
         onAddOpen();
     }
@@ -215,14 +212,20 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
         }
     }
 
-
-    const renderCell = React.useCallback((task, columnKey) => {
+    const renderCell = (task, columnKey) => {
         const cellValue = task[columnKey];
+        const taskIndex = mergedTaskList.findIndex((item) => item._id === task._id);
+        let isLast = false;
+        if (taskIndex === mergedTaskList.length - 1) {
+            isLast = true;
+            console.log("cat este?", taskIndex, mergedTaskList - 1)
+            console.log("asd", lastRef.current)
+        }
 
         switch (columnKey) {
             case "text":
                 return (
-                    <div
+                    <div ref={isLast ? lastRef : null}
                     >
                         {task.text}
                     </div>
@@ -254,7 +257,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
             default:
                 return cellValue;
         }
-    }, []);
+    }
 
     const mergedTaskList = taskList.reduce((acc, task) => {
         if (task.parentId === "") {
@@ -266,19 +269,36 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
         return acc;
     }, []);
 
-    async function load({signal, cursor}) {
-        const res = await fetch(
-            cursor || "https://localhost:3001/tasks/?page=",
-            {signal}
-        );
-        const json = await res.json();
-        return {
-            items: json.results,
-            cursor: json.next,
-        };
-    }
+    const lastRef = useRef(null);
+    const [limit, setLimit] = useState(20);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [isFetching, setIsFetching] = useState(false);
 
-    const list = useAsyncList({load});
+    useEffect(() => {
+        if (!lastRef?.current) return;
+
+        const observer = new IntersectionObserver(async ([entry]) => {
+            if (entry.isIntersecting) {
+                if (!isFetching) {
+                    setIsFetching(true);
+
+                    const newTasks = await getAllTodos({page: currentPage + 1, limit, time: "DESC"});
+
+                    if (newTasks.length > 0) {
+                        setCurrentPage(prevPage => prevPage + 1);
+                        setTaskList(prevTasks => [...prevTasks, ...newTasks]);
+                    }
+
+                    setIsFetching(false);
+                }
+            }
+        });
+
+        observer.observe(lastRef.current);
+
+        return () => observer.disconnect();
+    }, [lastRef, limit, currentPage, isFetching]);
+
 
     return (
         <>
@@ -322,7 +342,8 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                    onRowAction={() => {
                    }}
                    isStriped aria-label="Todos"
-                   className="todoTable">
+                   className="todoTable"
+            >
                 <TableHeader columns={columns}>
                     {(column) => (
                         <TableColumn key={column.uid} align="end">
@@ -331,11 +352,13 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
 
                     )}
                 </TableHeader>
-                <TableBody items={mergedTaskList} loadingState={list.loadingState} onLoadMore={list.loadMore}
+                <TableBody items={mergedTaskList}
                 >
                     {(task) => (
                         <TableRow key={task._id} className={`${task.parentId ? "subTask" : ""}`}>
-                            {(columnKey) => <TableCell>{renderCell(task, columnKey)}</TableCell>}
+                            {(columnKey) => {
+                                return <TableCell>{renderCell(task, columnKey)}</TableCell>
+                            }}
                         </TableRow>
                     )}
                 </TableBody>
