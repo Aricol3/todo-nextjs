@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const PORT = 3001;
 
-const secretKey = process.env.AUTH_SECRET;
+const secretKey = '25dfc5508b6ebbda0a36a6063ff6bf88d26545c43a4ee5be9a4d8ce81f5821f9';
 
 mongoose.connect('mongodb://localhost/todo-db')
     .then(() => {
@@ -36,8 +36,10 @@ const todoSchema = new mongoose.Schema({
     id: String,
     text: String,
     parentId: String,
-    createdAt: { type: Date, default: Date.now }
-}, {collection:"todo"});
+    createdAt: { type: Date, default: Date.now },
+    idUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // Reference to User model
+}, { collection: "todo" });
+
 
 // Create Todo model
 const Todo = mongoose.model('todo', todoSchema);
@@ -113,7 +115,6 @@ app.get('/protected', verifyToken, (req, res) => {
 
 function verifyToken(req, res, next) {
     const token = req.headers.authorization?.split(' ')[1];
-    console.log("??",token)
     if (!token) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -122,8 +123,8 @@ function verifyToken(req, res, next) {
         if (err) {
             return res.status(401).json({ error: 'Unauthorized' });
         }
-        console.log(decoded.userId)
-        req.userId = decoded.userId;
+        req.userId = decoded.userId; // Extracted userId from the decoded JWT
+        console.log("USER ID IS",decoded.userId)
         next();
     });
 }
@@ -132,18 +133,19 @@ function verifyToken(req, res, next) {
 
 
 
+
 // Get all todos
 app.get('/tasks', verifyToken, async (req, res) => {
     try {
-        console.log("ADSADSADAS")
         const { page = 1, limit = 20, time } = req.query;
         const skipIndex = (page - 1) * limit;
+
         let todos;
 
         if (time && time.toUpperCase() === 'DESC') {
-            todos = await Todo.find().sort({ createdAt: -1 }).limit(limit).skip(skipIndex);
+            todos = await Todo.find({ idUser: req.userId }).sort({ createdAt: -1 }).limit(limit).skip(skipIndex);
         } else {
-            todos = await Todo.find().sort({ createdAt: 1 }).limit(limit).skip(skipIndex);
+            todos = await Todo.find({ idUser: req.userId }).sort({ createdAt: 1 }).limit(limit).skip(skipIndex);
         }
 
         res.json(todos);
@@ -168,11 +170,12 @@ app.get('/tasks/:id', verifyToken, async (req, res) => {
     }
 });
 
+
 // Add a new todo
 app.post('/tasks', verifyToken, async (req, res) => {
     try {
         req.body.createdAt = new Date();
-        console.log("AA",req.body)
+        req.body.idUser = req.userId;
         const newTodo = await Todo.create(req.body);
         res.status(201).json(newTodo);
     } catch (err) {
@@ -197,6 +200,7 @@ app.put('/tasks/edit', verifyToken, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
 
 // Delete a todo
 app.delete('/tasks/:id', verifyToken, async (req, res) => {

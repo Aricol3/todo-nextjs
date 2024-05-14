@@ -18,7 +18,7 @@ export default function LoginPage() {
         const res = await registerUser(email,password)
         console.log("?!@#",res)
         if (res.ok) {
-            router.push('./');
+            router.push('/login');
         } else {
             toast(res.error);
         }
