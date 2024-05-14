@@ -1,6 +1,61 @@
+'use client'
+
 const baseUrl = "http://localhost:3001";
 const maxRetryAttempts = 20;
 const retryDelay = 3000;
+
+const fetchWithToken = async (url, options) => {
+    const token = localStorage.getItem("token") || "";
+    const headers = {
+        ...options.headers,
+        "Authorization": `Bearer ${token}`
+    };
+    return fetch(url, { ...options, headers });
+};
+
+export const authUser = async (email,password) => {
+    try {
+        const url = `${baseUrl}/login`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email: email,
+                password: password
+            })
+        });
+        const data = await res.json();
+        const token = data.token;
+        console.log("TOKEN", token)
+
+        localStorage.setItem('token', token);
+        return res;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const registerUser = async (email,password) => {
+    try {
+        const url = `${baseUrl}/register`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email: email,
+                password: password
+            })
+        });
+        return res;
+    } catch (error) {
+        throw error;
+    }
+};
+
 
 const retry = async (fn, retriesLeft = maxRetryAttempts) => {
     try {
@@ -9,17 +64,17 @@ const retry = async (fn, retriesLeft = maxRetryAttempts) => {
         if (retriesLeft === 0) {
             throw new Error('Max retries exceeded');
         }
-        console.log("NU")
         await new Promise(resolve => setTimeout(resolve, retryDelay));
         return await retry(fn, retriesLeft - 1);
     }
 };
 
 export const getAllTodos = async (queryParams) => {
+    console.log("TOKEN???123", localStorage.getItem('token'))
     try {
         const queryString = new URLSearchParams(queryParams).toString();
         const url = `${baseUrl}/tasks${queryString ? '?' + queryString : ''}`;
-        const res = await fetch(url, {cache: "no-store"});
+        const res = await fetchWithToken(url, {cache: "no-store"});
         if (!res.ok) {
             throw new Error('Failed to fetch todos');
         }
@@ -34,7 +89,7 @@ export const getAllTodos = async (queryParams) => {
 export const addTodo = async (newTodo) => {
     const addTodoAsync = async () => {
         try {
-            const res = await fetch(`${baseUrl}/tasks/`, {
+            const res = await fetchWithToken(`${baseUrl}/tasks/`, {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(newTodo),
@@ -53,7 +108,7 @@ export const addTodo = async (newTodo) => {
 export const editTodo = async (todo) => {
     const editTodoAsync = async () => {
         try {
-            const res = await fetch(`${baseUrl}/tasks/edit`, {
+            const res = await fetchWithToken(`${baseUrl}/tasks/edit`, {
                 method: "PUT",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(todo),
@@ -72,7 +127,7 @@ export const editTodo = async (todo) => {
 export const deleteTodo = async (taskId) => {
     const deleteTodoAsync = async () => {
         try {
-            const res = await fetch(`${baseUrl}/tasks/${taskId}`, {method: "DELETE"});
+            const res = await fetchWithToken(`${baseUrl}/tasks/${taskId}`, {method: "DELETE"});
             if (!res.ok) {
                 throw new Error('Failed to delete todo');
             }

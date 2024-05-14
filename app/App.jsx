@@ -17,6 +17,10 @@ const App = ({taskList}) => {
     const [tasks, setTasks] = useState(taskList);
 
     useEffect(() => {
+        setTasks(taskList)
+    }, [taskList])
+
+    useEffect(() => {
         socket.on('newTodo', newTodo => {
             console.log('Received new Todo:', newTodo);
             setTasks(prevTaskList => [...prevTaskList, newTodo]);
@@ -30,14 +34,15 @@ const App = ({taskList}) => {
 
     return (
         <Provider store={store}>
-        <NextUIProvider>
-            <NextThemesProvider attribute="class" defaultTheme="light">
-                <div className="flex justify-end mt-3">
-                    <ThemeSwitcher selectedColor={selectedColor}/>
-                </div>
-                <TodoTable tasks={tasks} selectedColor={selectedColor} setSelectedColor={setSelectedColor}/>
-            </NextThemesProvider>
-        </NextUIProvider>
+            <NextUIProvider>
+                <NextThemesProvider attribute="class" defaultTheme="light">
+                    <div className="flex justify-end mt-3">
+                        <ThemeSwitcher selectedColor={selectedColor}/>
+                    </div>
+                    {tasks &&
+                        <TodoTable tasks={tasks} selectedColor={selectedColor} setSelectedColor={setSelectedColor}/>}
+                </NextThemesProvider>
+            </NextUIProvider>
         </Provider>
     )
 }

@@ -156,7 +156,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                                             parentId: parentTaskId
                                         });
                                         setTaskList(prevTaskList => {
-                                            return [createdTask,...prevTaskList];
+                                            return [createdTask, ...prevTaskList];
                                         });
                                     } catch (error) {
                                         toast.error("Failed to add task. Please try again later.");
@@ -211,15 +211,19 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
             console.error("Delete task error:", error);
         }
     }
+    const [lastCellSet, setLastCellSet] = useState(false);
 
     const renderCell = (task, columnKey) => {
         const cellValue = task[columnKey];
         const taskIndex = mergedTaskList.findIndex((item) => item._id === task._id);
         let isLast = false;
+        setLastCellSet(false);
         if (taskIndex === mergedTaskList.length - 1) {
             isLast = true;
             console.log("cat este?", taskIndex, mergedTaskList - 1)
             console.log("asd", lastRef.current)
+            console.log("ISLAST?", isLast)
+            setLastCellSet(true);
         }
 
         switch (columnKey) {
@@ -275,6 +279,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
     const [isFetching, setIsFetching] = useState(false);
 
     useEffect(() => {
+        console.log("ASDASD!#@!#@!#!@", lastRef?.current)
         if (!lastRef?.current) return;
 
         const observer = new IntersectionObserver(async ([entry]) => {
@@ -283,6 +288,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                     setIsFetching(true);
 
                     const newTasks = await getAllTodos({page: currentPage + 1, limit, time: "DESC"});
+                    console.log("BAAA LOADING????")
 
                     if (newTasks.length > 0) {
                         setCurrentPage(prevPage => prevPage + 1);
@@ -297,7 +303,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
         observer.observe(lastRef.current);
 
         return () => observer.disconnect();
-    }, [lastRef, limit, currentPage, isFetching]);
+    }, [lastRef, lastCellSet,limit, currentPage, isFetching]);
 
 
     return (
