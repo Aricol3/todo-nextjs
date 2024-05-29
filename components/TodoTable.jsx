@@ -96,7 +96,9 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                                 <Button color={selectedColor} onPress={async () => {
                                     try {
                                         onEditClose();
-                                        await editTodo(editTask);
+                                        const res = await editTodo(editTask);
+                                        if (typeof res === 'string') toast.error(res);
+    else
                                         setTaskList(prevTaskList => prevTaskList.map(task => {
                                             if (task._id === editTask._id) {
                                                 return editTask;
@@ -155,9 +157,11 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
                                             text: newTask,
                                             parentId: parentTaskId
                                         });
-                                        setTaskList(prevTaskList => {
-                                            return [createdTask, ...prevTaskList];
-                                        });
+                                        if (typeof createdTask === 'string') toast.error(createdTask);
+                                        else
+                                            setTaskList(prevTaskList => {
+                                                return [createdTask, ...prevTaskList];
+                                            });
                                     } catch (error) {
                                         toast.error("Failed to add task. Please try again later.");
                                         console.error("Add task error:", error);
@@ -204,8 +208,10 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
 
     const handleDelete = async (taskId) => {
         try {
-            await deleteTodo(taskId);
-            setTaskList(prevTaskList => prevTaskList.filter(task => task._id !== taskId));
+            const res = await deleteTodo(taskId);
+            if (typeof res === 'string') toast.error(res);
+            else
+                setTaskList(prevTaskList => prevTaskList.filter(task => task._id !== taskId));
         } catch (error) {
             toast.error("Failed to delete task. Please try again later.");
             console.error("Delete task error:", error);
@@ -303,7 +309,7 @@ const TodoTable = ({tasks, selectedColor, setSelectedColor}) => {
         observer.observe(lastRef.current);
 
         return () => observer.disconnect();
-    }, [lastRef, lastCellSet,limit, currentPage, isFetching]);
+    }, [lastRef, lastCellSet, limit, currentPage]);
 
 
     return (

@@ -1,6 +1,6 @@
 'use client'
 
-const baseUrl = "http://localhost:3001";
+const baseUrl = "https://localhost:3001";
 const maxRetryAttempts = 20;
 const retryDelay = 3000;
 
@@ -10,10 +10,10 @@ const fetchWithToken = async (url, options) => {
         ...options.headers,
         "Authorization": `Bearer ${token}`
     };
-    return fetch(url, { ...options, headers });
+    return fetch(url, {...options, headers});
 };
 
-export const authUser = async (email,password) => {
+export const authUser = async (email, password) => {
     try {
         const url = `${baseUrl}/login`;
         const res = await fetch(url, {
@@ -37,7 +37,7 @@ export const authUser = async (email,password) => {
     }
 };
 
-export const registerUser = async (email,password) => {
+export const registerUser = async (email, password) => {
     try {
         const url = `${baseUrl}/register`;
         const res = await fetch(url, {
@@ -94,6 +94,9 @@ export const addTodo = async (newTodo) => {
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(newTodo),
             });
+            if (res.status === 401) {
+                return 'Permission denied';
+            }
             if (!res.ok) {
                 throw new Error('Failed to add todo');
             }
@@ -113,6 +116,9 @@ export const editTodo = async (todo) => {
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(todo),
             });
+            if (res.status === 401) {
+                return 'Permission denied';
+            }
             if (!res.ok) {
                 throw new Error('Failed to edit todo');
             }
@@ -128,6 +134,9 @@ export const deleteTodo = async (taskId) => {
     const deleteTodoAsync = async () => {
         try {
             const res = await fetchWithToken(`${baseUrl}/tasks/${taskId}`, {method: "DELETE"});
+            if (res.status === 401) {
+                return 'Permission denied';
+            }
             if (!res.ok) {
                 throw new Error('Failed to delete todo');
             }
@@ -136,4 +145,99 @@ export const deleteTodo = async (taskId) => {
         }
     }
     return await retry(deleteTodoAsync)
+};
+
+export const getUsers = async () => {
+    const getUsersAsync = async () => {
+        try {
+            const url = `${baseUrl}/users`;
+            const res = await fetchWithToken(url, {cache: "no-store"});
+            if (!res.ok) {
+                throw new Error('Failed to fetch users');
+            }
+
+            return res.json();
+        } catch (error) {
+            throw error;
+        }
+    }
+    return await retry(getUsersAsync)
+};
+
+export const getUser = async () => {
+    const getUserAsync = async () => {
+        try {
+            const url = `${baseUrl}/user`;
+            const res = await fetchWithToken(url, {cache: "no-store"});
+            if (!res.ok) {
+                throw new Error('Failed to fetch users');
+            }
+
+            return res.json();
+        } catch (error) {
+            throw error;
+        }
+    }
+    return await retry(getUserAsync)
+};
+
+export const handleAddUser = async (newUser) => {
+    const addUserAsync = async () => {
+        try {
+            const res = await fetchWithToken(`${baseUrl}/users/`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(newUser),
+            });
+            if (res.status === 401) {
+                return 'Permission denied';
+            }
+            if (!res.ok) {
+                throw new Error('Failed to add user');
+            }
+            return await res.json();
+        } catch (error) {
+            throw error;
+        }
+    }
+    return await retry(addUserAsync)
+};
+
+export const handleEditUser = async (user) => {
+    const editUserAsync = async () => {
+        try {
+            const res = await fetchWithToken(`${baseUrl}/users/edit`, {
+                method: "PUT",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(user),
+            });
+            if (res.status === 401) {
+                return 'Permission denied';
+            }
+            if (!res.ok) {
+                throw new Error('Failed to edit user');
+            }
+            return await res.json();
+        } catch (error) {
+            throw error;
+        }
+    }
+    return await retry(editUserAsync)
+};
+
+export const handleDeleteUser = async (userId) => {
+    const deleteUserAsync = async () => {
+        try {
+            const res = await fetchWithToken(`${baseUrl}/users/${userId}`, {method: "DELETE"});
+            if (res.status === 401) {
+                return 'Permission denied';
+            }
+            if (!res.ok) {
+                throw new Error('Failed to delete todo');
+            }
+        } catch (error) {
+            throw error;
+        }
+    }
+    return await retry(deleteUserAsync)
 };
